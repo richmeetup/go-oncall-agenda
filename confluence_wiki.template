@@ -1,0 +1,42 @@
+h1. Discussion
+
+
+h1. Issues from Last Week
+
+If any issues have recurred, can we assign someone to look into this issue? If an issue hasn't been updated in a while, why not? (Comments should live in each JIRA issue.)
+
+
+h1. Active Issues
+
+Put issues here that the next on-call shift should be aware of. Add a playbook if it doesn't exist yet.
+
+||JIRA Issue||Playbook||
+| | |
+
+h1. Who's On-call Next Week
+
+||Team||Engineer||Start||End||{{range $policy, $schedules := .NextWeekSchedules}}{{range $index, $schedule := $schedules}}
+{{if $index}}| |{{else}}|*{{$policy}}*|{{end}}{{.Username}}|{{.StartDate}}|{{.EndDate}}|{{end}}{{end}}
+
+h1. Events of the Week
+
+||Team||Engineer||Start||End||{{range $policy, $schedules := .LastWeekSchedules}}{{range $index, $schedule := $schedules}}
+{{if $index}}| |{{else}}|*{{$policy}}*|{{end}}{{.Username}}|{{.StartDate}}|{{.EndDate}}|{{end}}{{end}}
+
+@systems_oncall & @dev_oncall were on-call. Any insights?
+
+h2. Repeating Issues
+
+||Description||#s||Process||JIRA Issue||Notes||
+|!BB: * red! -- deploy*.meetup.com.streamd|3| | | |
+
+h2. Tasks
+
+h2. Alerts
+
+{{range $date, $incidents := .IncidentsOfLastWeek}}h3. {{$date}}
+
+||Time||PagerDuty||Description/Notes||Resolver||Details||
+{{range $index, $incident := $incidents}}|[{{$incident.CreatedAtTime}}|https://meetuphq.slack.com/] (*r)|[#{{$incident.IncidentNum}}|{{$incident.HtmlURL}}] |{{$incident.Description}} |{{$incident.Responder}} |{{if $incident.Body}}{code}{{$incident.Body}}{code}{{end}} |
+{{end}}
+{{end}}
