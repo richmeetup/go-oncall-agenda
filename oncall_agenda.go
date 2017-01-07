@@ -8,6 +8,10 @@ import (
 
 	pagerduty "github.com/PagerDuty/go-pagerduty"
 
+	"regexp"
+
+	"sort"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -72,7 +76,7 @@ func getIncidents(client *pagerduty.Client, fromDate time.Time, untilDate time.T
 				createdAt.Format(ReadableTimeFormat),
 				incident.LastStatusChangeBy.Summary,
 				incident.Status,
-				incident.FirstTriggerLogEntry.EventDetails["Description"],
+				incident.FirstTriggerLogEntry.EventDetails["description"],
 				incident.HTMLURL,
 				incident.FirstTriggerLogEntry.Channel.Body})
 		}
@@ -81,10 +85,58 @@ func getIncidents(client *pagerduty.Client, fromDate time.Time, untilDate time.T
 	return incidents
 }
 
+type RepeatingIncident struct {
+	Description string
+	Amount      uint
+}
+
+type RepeatingIncidents []RepeatingIncident
+
+func (slice RepeatingIncidents) Len() int {
+	return len(slice)
+}
+
+func (slice RepeatingIncidents) Less(i, j int) bool {
+	return slice[i].Amount < slice[j].Amount
+}
+
+func (slice RepeatingIncidents) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
+func getRepeatingIncidents(incidents []Incident) RepeatingIncidents {
+	var repeatingIncidents RepeatingIncidents
+
+	incidentsByType := map[string]RepeatingIncident{}
+	for _, incident := range incidents {
+		strippedDescription := regexp.MustCompile("\\d+").ReplaceAllString(incident.Description, "*")
+		if repeatingIncident, present := incidentsByType[strippedDescription]; present {
+			repeatingIncident.Amount = repeatingIncident.Amount + 1
+			incidentsByType[strippedDescription] = repeatingIncident
+		} else {
+			repeatingIncident := RepeatingIncident{strippedDescription, 1}
+			incidentsByType[strippedDescription] = repeatingIncident
+		}
+	}
+
+	// remove the nonrepeating incidents
+	for _, repeatingIncident := range incidentsByType {
+		if repeatingIncident.Amount > 1 {
+			repeatingIncidents = append(repeatingIncidents, repeatingIncident)
+		}
+	}
+
+	sort.Sort(sort.Reverse(repeatingIncidents))
+	return repeatingIncidents
+}
+
 func GetLastFridayAt7PM() time.Time {
 	// A Weekday specifies a day of the week (Sunday = 0, ...)
 	nowDate := time.Now()
 	daysFromLastFriday := (-2 - int(nowDate.Weekday())) % 7
+	if daysFromLastFriday == 0 {
+		daysFromLastFriday = -7
+	}
 	lastFriday := nowDate.AddDate(0, 0, daysFromLastFriday)
 	return time.Date(lastFriday.Year(), lastFriday.Month(), lastFriday.Day(), 19, 0, 0, 0, nowDate.Location())
 }
@@ -96,9 +148,10 @@ type Schedule struct {
 }
 
 type WikiTemplateValues struct {
-	LastWeekSchedules   map[string][]Schedule
-	NextWeekSchedules   map[string][]Schedule
-	IncidentsOfLastWeek map[string][]Incident
+	LastWeekSchedules            map[string][]Schedule
+	NextWeekSchedules            map[string][]Schedule
+	IncidentsOfLastWeek          map[string][]Incident
+	RepeatingIncidentsOfLastWeek RepeatingIncidents
 }
 
 func getRelevantSchedules(client *pagerduty.Client) []string {
@@ -156,6 +209,9 @@ func main() {
 	client := pagerduty.NewClient(config.Authtoken)
 
 	incidents := getIncidents(client, lastFridayAt7PM, thisFridayAt7PM)
+
+	repeatingIncidents := getRepeatingIncidents(incidents)
+	templateValues.RepeatingIncidentsOfLastWeek = repeatingIncidents
 
 	// loop through incidents and group them by date
 	incidentsOfLastWeek := map[string][]Incident{}

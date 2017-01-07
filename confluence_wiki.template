@@ -28,7 +28,8 @@ h1. Events of the Week
 h2. Repeating Issues
 
 ||Description||#s||Process||JIRA Issue||Notes||
-|!BB: * red! -- deploy*.meetup.com.streamd|3| | | |
+{{range $i, $incident := .RepeatingIncidentsOfLastWeek}}|{{$incident.Description}}|{{$incident.Amount}}| | | |
+{{end}}
 
 h2. Tasks
 

@@ -41,4 +41,4 @@ This will generate the Confluence Wiki output to `stdout`. On a Mac, you can pip
 
 ### panic: open confluence_wiki.template: no such file or directory
 
-The script needs to read `confluence_wiki.template` in the repo. If the file isn't in the current directory, you'll see an error.**
+The script needs to read `confluence_wiki.template` in the repo. If the file isn't in the current directory, you'll see an error.
